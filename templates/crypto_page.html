@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f2f5f0" />
+    <title>Cryptography</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='crypto-page.css') }}" />
+    <style>
+      :root {
+        --page: #f2f5f0;
+        --surface: #fff;
+        --ink: #202a25;
+        --line: #dce3dc;
+        --grid-dot: #d5ddd5;
+        --heading: 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', Georgia, serif;
+        --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+
+        font-family: 'Aptos', 'Segoe UI', sans-serif;
+        color: var(--ink);
+        background: var(--page);
+        font-synthesis: none;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      body {
+        min-width: 320px;
+        min-height: 100vh;
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="crypto-page">
+      <nav class="crypto-topbar" aria-label="Breadcrumb">
+        <a class="back-link" href="/">Back to categories</a>
+        <span class="topbar-label">CRYPTOGRAPHY / 01</span>
+      </nav>
+
+      <section class="crypto-content" aria-labelledby="crypto-title">
+        <div class="crypto-workspace">
+          <header class="crypto-heading">
+            <span class="crypto-eyebrow">PRIVATE BY DESIGN</span>
+            <h1 id="crypto-title">Cryptography</h1>
+          </header>
+
+          <div
+            class="mode-switch"
+            role="group"
+            aria-label="Choose an operation"
+            data-mode="encrypt"
+          >
+            <span class="mode-indicator" aria-hidden="true"></span>
+            <button id="encrypt-mode-tab" type="button" aria-pressed="true">
+              Encrypt
+            </button>
+            <button id="decrypt-mode-tab" type="button" aria-pressed="false">
+              Decrypt
+            </button>
+          </div>
+
+          <form id="crypto-form" class="crypto-form">
+            <div class="crypto-fields">
+              <label class="field-group" for="message">
+                <span id="message-label">Plaintext</span>
+                <textarea
+                  id="message"
+                  rows="4"
+                  placeholder="Enter the message to encrypt"
+                ></textarea>
+              </label>
+
+              <div class="field-group key-field">
+                <div class="key-field-heading">
+                  <label for="key">Key</label>
+                  <button id="generate-key-button" class="key-generate" type="button">
+                    Generate key
+                  </button>
+                </div>
+                <input
+                  id="key"
+                  type="password"
+                  autocomplete="off"
+                  placeholder="Enter your key"
+                />
+              </div>
+
+              <button id="crypto-encrypt-button" class="crypto-submit" type="submit">
+                Encrypt message
+              </button>
+
+              <label class="field-group" for="output">
+                <span id="output-label">Ciphertext</span>
+                <textarea
+                  id="output"
+                  readonly
+                  rows="4"
+                  placeholder="Encrypted output will appear here"
+                ></textarea>
+              </label>
+            </div>
+            <p id="crypto-error" class="crypto-error" role="alert" hidden></p>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      (() => {
+        const form = document.getElementById('crypto-form')
+        const messageField = document.getElementById('message')
+        const keyField = document.getElementById('key')
+        const generateKeyButton = document.getElementById('generate-key-button')
+        const outputField = document.getElementById('output')
+        const messageLabel = document.getElementById('message-label')
+        const outputLabel = document.getElementById('output-label')
+        const errorMessage = document.getElementById('crypto-error')
+        const encryptTab = document.getElementById('encrypt-mode-tab')
+        const decryptTab = document.getElementById('decrypt-mode-tab')
+        const modeSwitch = document.querySelector('.mode-switch')
+        const actionButton = document.querySelector('.crypto-submit')
+        let mode = 'encrypt'
+
+        function showError(message) {
+          errorMessage.textContent = message
+          errorMessage.hidden = !message
+        }
+
+        function changeMode(nextMode) {
+          mode = nextMode
+          modeSwitch.dataset.mode = mode
+          encryptTab.setAttribute('aria-pressed', String(mode === 'encrypt'))
+          decryptTab.setAttribute('aria-pressed', String(mode === 'decrypt'))
+          messageLabel.textContent = mode === 'encrypt' ? 'Plaintext' : 'Ciphertext'
+          outputLabel.textContent = mode === 'encrypt' ? 'Ciphertext' : 'Plaintext'
+          messageField.placeholder = mode === 'encrypt'
+            ? 'Enter the message to encrypt'
+            : 'Paste ciphertext to decrypt'
+          outputField.placeholder = mode === 'encrypt'
+            ? 'Encrypted output will appear here'
+            : 'Decrypted output will appear here'
+          actionButton.id = `crypto-${mode}-button`
+          actionButton.textContent = mode === 'encrypt' ? 'Encrypt message' : 'Decrypt message'
+          messageField.value = ''
+          keyField.value = ''
+          keyField.type = 'password'
+          outputField.value = ''
+          showError('')
+        }
+
+        function generateKey() {
+          try {
+            const randomBytes = window.crypto.getRandomValues(new Uint8Array(32))
+            keyField.value = Array.from(randomBytes, (byte) =>
+              byte.toString(16).padStart(2, '0'),
+            ).join('')
+            keyField.type = 'text'
+            keyField.focus()
+            keyField.select()
+            outputField.value = ''
+            showError('')
+          } catch {
+            showError('Could not generate a secure key in this browser.')
+          }
+        }
+
+        async function handleEncrypt(event) {
+          event.preventDefault()
+          outputField.value = ''
+          showError('')
+
+          if (!messageField.value.trim() || !keyField.value) {
+            showError('Please enter both plaintext and key.')
+            return
+          }
+
+          try {
+            const response = await fetch('/api/crypto/encrypt', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text: messageField.value, key: keyField.value }),
+            })
+            const data = await response.json()
+            if (!response.ok) {
+              showError(data.error || 'Encryption failed. Please try again.')
+              return
+            }
+            outputField.value = data.result
+          } catch {
+            showError('Encryption failed. Please try again.')
+          }
+        }
+
+        async function handleDecrypt(event) {
+          event.preventDefault()
+          outputField.value = ''
+          showError('')
+
+          if (!messageField.value.trim() || !keyField.value) {
+            showError('Please enter both ciphertext and key.')
+            return
+          }
+
+          try {
+            const response = await fetch('/api/crypto/decrypt', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text: messageField.value.trim(), key: keyField.value }),
+            })
+            const data = await response.json()
+            if (!response.ok) {
+              showError(data.error || 'Wrong key or invalid ciphertext')
+              return
+            }
+            outputField.value = data.result
+          } catch {
+            showError('Wrong key or invalid ciphertext')
+          }
+        }
+
+        encryptTab.addEventListener('click', () => changeMode('encrypt'))
+        decryptTab.addEventListener('click', () => changeMode('decrypt'))
+        generateKeyButton.addEventListener('click', generateKey)
+        form.addEventListener('submit', (event) => {
+          if (mode === 'encrypt') {
+            handleEncrypt(event)
+          } else {
+            handleDecrypt(event)
+          }
+        })
+      })()
+    </script>
+  </body>
+</html>

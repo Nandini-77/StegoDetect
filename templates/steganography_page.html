@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f2f5f0" />
+    <title>Steganography</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='crypto-page.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='steganography-page.css') }}" />
+    <style>
+      :root {
+        --page: #f2f5f0;
+        --surface: #fff;
+        --ink: #202a25;
+        --line: #dce3dc;
+        --grid-dot: #d5ddd5;
+        --heading: 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', Georgia, serif;
+        --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+
+        font-family: 'Aptos', 'Segoe UI', sans-serif;
+        color: var(--ink);
+        background: var(--page);
+        font-synthesis: none;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      body {
+        min-width: 320px;
+        min-height: 100vh;
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="crypto-page stego-page">
+      <nav class="crypto-topbar" aria-label="Breadcrumb">
+        <a class="back-link" href="/">Back to categories</a>
+        <span class="topbar-label">STEGANOGRAPHY / 02</span>
+      </nav>
+
+      <section class="crypto-content" aria-labelledby="stego-title">
+        <div class="crypto-workspace stego-workspace">
+          <header class="crypto-heading">
+            <span class="crypto-eyebrow">HIDDEN IN PLAIN SIGHT</span>
+            <h1 id="stego-title">Steganography</h1>
+          </header>
+
+          <div class="mode-switch" role="group" aria-label="Choose an operation" data-mode="encrypt">
+            <span class="mode-indicator" aria-hidden="true"></span>
+            <button id="stego-encrypt-tab" type="button" aria-pressed="true">
+              Hide
+            </button>
+            <button id="stego-decrypt-tab" type="button" aria-pressed="false">
+              Extract
+            </button>
+          </div>
+
+          <section id="stego-encrypt-panel" class="crypto-form stego-panel" aria-label="Hide a message">
+            <div class="crypto-fields">
+              <label class="field-group" for="secret-message">
+                <span>Message</span>
+                <textarea
+                  id="secret-message"
+                  rows="4"
+                  placeholder="Enter a message"
+                ></textarea>
+              </label>
+
+              <label class="field-group" for="carrier-image">
+                <span>Image</span>
+                <input
+                  id="carrier-image"
+                  type="file"
+                  accept="image/*"
+                />
+              </label>
+
+              <figure class="stego-image-frame">
+                <img id="carrier-preview" alt="Selected carrier image" hidden />
+                <figcaption id="carrier-placeholder">Selected image preview</figcaption>
+              </figure>
+
+              <button id="encrypt-stego-button" class="crypto-submit" type="button" disabled>
+                Hide message
+              </button>
+
+              <div class="field-group">
+                <span>Stego image</span>
+                <figure class="stego-image-frame stego-output-frame">
+                  <img id="encrypted-image" alt="Stego image" hidden />
+                  <figcaption id="encrypted-placeholder">Stego image will appear here</figcaption>
+                </figure>
+                <a id="download-stego-image" class="stego-download" hidden download="stego_image.png">Download PNG</a>
+              </div>
+            </div>
+          </section>
+
+          <section id="stego-decrypt-panel" class="crypto-form stego-panel" aria-label="Extract a message" hidden>
+            <div class="crypto-fields">
+              <label class="field-group" for="stego-image">
+                <span>Image</span>
+                <input
+                  id="stego-image"
+                  type="file"
+                  accept="image/*"
+                />
+              </label>
+
+              <figure class="stego-image-frame">
+                <img id="stego-preview" alt="Selected image for extraction" hidden />
+                <figcaption id="stego-placeholder">Selected image preview</figcaption>
+              </figure>
+
+              <button id="decrypt-stego-button" class="crypto-submit" type="button" disabled>
+                Extract message
+              </button>
+
+              <label class="field-group" for="revealed-message">
+                <span>Extracted message</span>
+                <textarea
+                  id="revealed-message"
+                  rows="4"
+                  placeholder="Extracted message will appear here"
+                  readonly
+                ></textarea>
+              </label>
+            </div>
+          </section>
+          <p id="stego-error" class="crypto-error" role="alert" hidden></p>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      (() => {
+        const encryptTab = document.getElementById('stego-encrypt-tab')
+        const decryptTab = document.getElementById('stego-decrypt-tab')
+        const modeSwitch = document.querySelector('.mode-switch')
+        const encryptPanel = document.getElementById('stego-encrypt-panel')
+        const decryptPanel = document.getElementById('stego-decrypt-panel')
+        const messageField = document.getElementById('secret-message')
+        const revealedMessage = document.getElementById('revealed-message')
+        const encryptButton = document.getElementById('encrypt-stego-button')
+        const decryptButton = document.getElementById('decrypt-stego-button')
+        const encryptedImage = document.getElementById('encrypted-image')
+        const encryptedPlaceholder = document.getElementById('encrypted-placeholder')
+        const downloadLink = document.getElementById('download-stego-image')
+        const errorMessage = document.getElementById('stego-error')
+        const imageInputs = [
+          ['carrier-image', 'carrier-preview', 'carrier-placeholder'],
+          ['stego-image', 'stego-preview', 'stego-placeholder'],
+        ]
+        const previewUrls = new Map()
+        let outputUrl = null
+
+        function showError(message) {
+          errorMessage.textContent = message
+          errorMessage.hidden = !message
+        }
+
+        function updateButtons() {
+          encryptButton.disabled = !messageField.value.trim()
+            || !document.getElementById('carrier-image').files[0]
+          decryptButton.disabled = !document.getElementById('stego-image').files[0]
+        }
+
+        function clearOutputImage() {
+          if (outputUrl) URL.revokeObjectURL(outputUrl)
+          outputUrl = null
+          encryptedImage.hidden = true
+          encryptedImage.removeAttribute('src')
+          encryptedPlaceholder.hidden = false
+          downloadLink.hidden = true
+          downloadLink.removeAttribute('href')
+        }
+
+        function clearImageInput(inputId, previewId, placeholderId) {
+          document.getElementById(inputId).value = ''
+          document.getElementById(previewId).hidden = true
+          document.getElementById(previewId).removeAttribute('src')
+          document.getElementById(placeholderId).hidden = false
+          releasePreviewUrl(inputId)
+        }
+
+        function releasePreviewUrl(inputId) {
+          const url = previewUrls.get(inputId)
+          if (url) {
+            URL.revokeObjectURL(url)
+            previewUrls.delete(inputId)
+          }
+        }
+
+        function resetFields() {
+          messageField.value = ''
+          revealedMessage.value = ''
+          clearOutputImage()
+          showError('')
+          for (const [inputId, previewId, placeholderId] of imageInputs) {
+            clearImageInput(inputId, previewId, placeholderId)
+          }
+        }
+
+        function setMode(mode) {
+          const isEncrypt = mode === 'encrypt'
+          modeSwitch.dataset.mode = mode
+          encryptTab.setAttribute('aria-pressed', String(isEncrypt))
+          decryptTab.setAttribute('aria-pressed', String(!isEncrypt))
+          encryptPanel.hidden = !isEncrypt
+          decryptPanel.hidden = isEncrypt
+          resetFields()
+        }
+
+        for (const [inputId, previewId, placeholderId] of imageInputs) {
+          const input = document.getElementById(inputId)
+          input.addEventListener('change', () => {
+            releasePreviewUrl(inputId)
+            const file = input.files[0]
+            if (!file) {
+              document.getElementById(previewId).hidden = true
+              document.getElementById(placeholderId).hidden = false
+              updateButtons()
+              return
+            }
+
+            const url = URL.createObjectURL(file)
+            previewUrls.set(inputId, url)
+            const preview = document.getElementById(previewId)
+            preview.src = url
+            preview.hidden = false
+            document.getElementById(placeholderId).hidden = true
+            updateButtons()
+          })
+        }
+
+        async function submitEncrypt() {
+          showError('')
+          clearOutputImage()
+          encryptButton.disabled = true
+          encryptButton.textContent = 'Hiding...'
+          const formData = new FormData()
+          formData.append('message', messageField.value)
+          formData.append('image', document.getElementById('carrier-image').files[0])
+
+          try {
+            const response = await fetch('/api/steganography/encrypt', {
+              method: 'POST',
+              body: formData,
+            })
+            if (!response.ok) {
+              const data = await response.json()
+              throw new Error(data.error || 'Could not create the stego image.')
+            }
+            outputUrl = URL.createObjectURL(await response.blob())
+            encryptedImage.src = outputUrl
+            encryptedImage.hidden = false
+            encryptedPlaceholder.hidden = true
+            downloadLink.href = outputUrl
+            downloadLink.hidden = false
+          } catch (error) {
+            showError(error.message || 'Could not create the stego image.')
+          } finally {
+            encryptButton.textContent = 'Hide message'
+            updateButtons()
+          }
+        }
+
+        async function submitDecrypt() {
+          showError('')
+          revealedMessage.value = ''
+          decryptButton.disabled = true
+          decryptButton.textContent = 'Extracting...'
+          const formData = new FormData()
+          formData.append('image', document.getElementById('stego-image').files[0])
+
+          try {
+            const response = await fetch('/api/steganography/decrypt', {
+              method: 'POST',
+              body: formData,
+            })
+            const data = await response.json()
+            if (!response.ok) throw new Error(data.error || 'Could not decrypt the message.')
+            revealedMessage.value = data.result
+          } catch (error) {
+            showError(error.message || 'Could not decrypt the message.')
+          } finally {
+            decryptButton.textContent = 'Extract message'
+            updateButtons()
+          }
+        }
+
+        encryptTab.addEventListener('click', () => setMode('encrypt'))
+        decryptTab.addEventListener('click', () => setMode('decrypt'))
+        messageField.addEventListener('input', updateButtons)
+        encryptButton.addEventListener('click', submitEncrypt)
+        decryptButton.addEventListener('click', submitDecrypt)
+      })()
+    </script>
+  </body>
+</html>

@@ -1,0 +1,1015 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f2f5f0" />
+
+    <title>Stego Detection</title>
+
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='crypto-page.css') }}"
+    />
+
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='steganography-page.css') }}"
+    />
+
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='detection-page.css') }}"
+    />
+
+    <style>
+      :root {
+        --page: #f2f5f0;
+        --surface: #fff;
+        --ink: #202a25;
+        --line: #dce3dc;
+        --grid-dot: #d5ddd5;
+
+        --heading:
+          'Iowan Old Style',
+          'Palatino Linotype',
+          'Book Antiqua',
+          Georgia,
+          serif;
+
+        --mono:
+          'SFMono-Regular',
+          Consolas,
+          'Liberation Mono',
+          monospace;
+
+        font-family:
+          'Aptos',
+          'Segoe UI',
+          sans-serif;
+
+        color: var(--ink);
+        background: var(--page);
+
+        font-synthesis: none;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      body {
+        min-width: 320px;
+        min-height: 100vh;
+        margin: 0;
+      }
+    </style>
+  </head>
+
+  <body>
+
+    <main class="crypto-page detection-page">
+
+      <!-- ==================================================
+           TOP NAVIGATION
+      =================================================== -->
+
+      <nav
+        class="crypto-topbar"
+        aria-label="Breadcrumb"
+      >
+        <a
+          class="back-link"
+          href="/"
+        >
+          Back to categories
+        </a>
+
+        <span class="topbar-label">
+          STEGO DETECTION / 04
+        </span>
+      </nav>
+
+
+      <!-- ==================================================
+           DETECTION CONTENT
+      =================================================== -->
+
+      <section
+        class="detection-content"
+        aria-labelledby="detection-title"
+      >
+
+        <div class="detection-workspace">
+
+          <!-- ==================================================
+               HEADING
+          =================================================== -->
+
+          <header
+            class="crypto-heading detection-heading"
+          >
+
+            <span class="crypto-eyebrow">
+              IMAGE CLASSIFICATION
+            </span>
+
+            <h1 id="detection-title">
+              Stego Detection
+            </h1>
+
+          </header>
+
+
+          <!-- ==================================================
+               UPLOAD FORM
+          =================================================== -->
+
+          <form
+            id="detection-form"
+            class="crypto-form detection-form"
+          >
+
+            <div class="crypto-fields">
+
+              <!-- IMAGE INPUT -->
+
+              <label
+                class="field-group"
+                for="detection-image"
+              >
+
+                <span>
+                  Image
+                </span>
+
+                <input
+                  id="detection-image"
+                  type="file"
+                  accept="image/*"
+                />
+
+              </label>
+
+
+              <!-- IMAGE PREVIEW -->
+
+              <figure
+                class="stego-image-frame detection-preview"
+              >
+
+                <img
+                  id="detection-preview"
+                  alt="Image selected for analysis"
+                  hidden
+                />
+
+                <figcaption
+                  id="detection-placeholder"
+                >
+                  Selected image preview
+                </figcaption>
+
+              </figure>
+
+
+              <!-- ANALYZE BUTTON -->
+
+              <button
+                id="analyze-image-button"
+                class="crypto-submit"
+                type="submit"
+                disabled
+              >
+                Analyze Image
+              </button>
+
+            </div>
+
+
+            <!-- ERROR -->
+
+            <p
+              id="detection-error"
+              class="crypto-error"
+              role="alert"
+              hidden
+            ></p>
+
+          </form>
+
+
+          <!-- ==================================================
+               DETECTION RESULTS
+          =================================================== -->
+
+          <section
+            id="detection-results"
+            class="detection-results"
+            aria-live="polite"
+            hidden
+          >
+
+            <!-- RESULT HEADING -->
+
+            <div class="detection-result-heading">
+
+              <div>
+
+                <span class="crypto-eyebrow">
+                  PREDICTION
+                </span>
+
+                <h2 id="detection-prediction"></h2>
+
+              </div>
+
+
+              <!-- CONFIDENCE -->
+
+              <div class="detection-confidence">
+
+                <span>
+                  Detection confidence
+                </span>
+
+                <strong
+                  id="detection-confidence-value"
+                ></strong>
+
+                <!--
+                  IMPORTANT:
+                  Confidence is returned from backend
+                  already as a percentage.
+
+                  Example:
+                  96.0 means 96%
+
+                  Therefore max = 100.
+                -->
+
+                <progress
+                  id="detection-confidence-meter"
+                  max="100"
+                  value="0"
+                ></progress>
+
+              </div>
+
+            </div>
+
+
+            <!-- ==================================================
+                 CLASS PROBABILITIES
+            =================================================== -->
+
+            <div
+              class="detection-feature-section"
+              id="probability-section"
+            >
+
+              <h3>
+                Detection probabilities
+              </h3>
+
+              <dl class="detection-features">
+
+                <div>
+                  <dt>
+                    Cover probability
+                  </dt>
+
+                  <dd
+                    id="cover-probability"
+                  >
+                    —
+                  </dd>
+                </div>
+
+
+                <div>
+                  <dt>
+                    Stego probability
+                  </dt>
+
+                  <dd
+                    id="stego-probability"
+                  >
+                    —
+                  </dd>
+                </div>
+
+              </dl>
+
+            </div>
+
+
+            <!-- ==================================================
+                 EXTRACTED FEATURES
+            =================================================== -->
+
+            <div
+              class="detection-feature-section"
+            >
+
+              <h3>
+                Extracted features
+              </h3>
+
+              <dl class="detection-features">
+
+                <div>
+                  <dt>
+                    lsb_mean
+                  </dt>
+
+                  <dd
+                    data-feature-value="lsb_mean"
+                  ></dd>
+                </div>
+
+
+                <div>
+                  <dt>
+                    lsb_variance
+                  </dt>
+
+                  <dd
+                    data-feature-value="lsb_variance"
+                  ></dd>
+                </div>
+
+
+                <div>
+                  <dt>
+                    lsb_transition_rate
+                  </dt>
+
+                  <dd
+                    data-feature-value="lsb_transition_rate"
+                  ></dd>
+                </div>
+
+
+                <div>
+                  <dt>
+                    pixel_mean
+                  </dt>
+
+                  <dd
+                    data-feature-value="pixel_mean"
+                  ></dd>
+                </div>
+
+
+                <div>
+                  <dt>
+                    pixel_variance
+                  </dt>
+
+                  <dd
+                    data-feature-value="pixel_variance"
+                  ></dd>
+                </div>
+
+              </dl>
+
+            </div>
+
+          </section>
+
+
+          <!-- ==================================================
+               MODEL ANALYSIS
+          =================================================== -->
+
+          <section
+            class="model-analysis"
+            aria-labelledby="model-analysis-title"
+          >
+
+            <header class="analysis-heading">
+
+              <span class="crypto-eyebrow">
+                MODEL DETAILS
+              </span>
+
+              <h2 id="model-analysis-title">
+                Model Analysis
+              </h2>
+
+            </header>
+
+
+            <!-- MODEL INFORMATION -->
+
+            <dl class="analysis-metrics">
+
+              <div>
+                <dt>
+                  Model
+                </dt>
+
+                <dd>
+                  Random Forest
+                </dd>
+              </div>
+
+
+              <div>
+                <dt>
+                  Estimators
+                </dt>
+
+                <dd>
+                  200 trees
+                </dd>
+              </div>
+
+
+              <div>
+                <dt>
+                  Input features
+                </dt>
+
+                <dd>
+                  5 features
+                </dd>
+              </div>
+
+
+              <div>
+                <dt>
+                  Test accuracy
+                </dt>
+
+                <dd>
+                  64.29%
+                </dd>
+              </div>
+
+            </dl>
+
+
+            <!-- GRAPHS -->
+
+            <div class="analysis-graphs">
+
+              <figure>
+
+                <img
+                  src="{{ url_for('static', filename='aes_confusion_matrix.png') }}"
+                  alt="Confusion matrix for the AES stego detector"
+                  loading="lazy"
+                />
+
+                <figcaption>
+                  Confusion matrix
+                </figcaption>
+
+              </figure>
+
+
+              <figure>
+
+                <img
+                  src="{{ url_for('static', filename='aes_feature_importance.png') }}"
+                  alt="Random Forest feature importance for the five extracted features"
+                  loading="lazy"
+                />
+
+                <figcaption>
+                  Feature importance
+                </figcaption>
+
+              </figure>
+
+
+              <figure>
+
+                <img
+                  src="{{ url_for('static', filename='aes_payload_vs_detection.png') }}"
+                  alt="Payload size versus detection rate"
+                  loading="lazy"
+                />
+
+                <figcaption>
+                  Payload vs detection
+                </figcaption>
+
+              </figure>
+
+            </div>
+
+          </section>
+
+        </div>
+
+      </section>
+
+    </main>
+
+
+    <!-- ======================================================
+         JAVASCRIPT
+    ======================================================= -->
+
+    <script>
+
+      (() => {
+
+        /* ==================================================
+           ELEMENTS
+        =================================================== */
+
+        const form =
+          document.getElementById(
+            'detection-form'
+          )
+
+
+        const imageInput =
+          document.getElementById(
+            'detection-image'
+          )
+
+
+        const preview =
+          document.getElementById(
+            'detection-preview'
+          )
+
+
+        const placeholder =
+          document.getElementById(
+            'detection-placeholder'
+          )
+
+
+        const analyzeButton =
+          document.getElementById(
+            'analyze-image-button'
+          )
+
+
+        const errorMessage =
+          document.getElementById(
+            'detection-error'
+          )
+
+
+        const results =
+          document.getElementById(
+            'detection-results'
+          )
+
+
+        const prediction =
+          document.getElementById(
+            'detection-prediction'
+          )
+
+
+        const confidenceValue =
+          document.getElementById(
+            'detection-confidence-value'
+          )
+
+
+        const confidenceMeter =
+          document.getElementById(
+            'detection-confidence-meter'
+          )
+
+
+        const coverProbability =
+          document.getElementById(
+            'cover-probability'
+          )
+
+
+        const stegoProbability =
+          document.getElementById(
+            'stego-probability'
+          )
+
+
+        let previewUrl = null
+
+
+        /* ==================================================
+           ERROR DISPLAY
+        =================================================== */
+
+        function showError(message) {
+
+          errorMessage.textContent =
+            message
+
+          errorMessage.hidden =
+            !message
+
+        }
+
+
+        /* ==================================================
+           IMAGE SELECTION
+        =================================================== */
+
+        imageInput.addEventListener(
+          'change',
+          () => {
+
+            if (previewUrl) {
+
+              URL.revokeObjectURL(
+                previewUrl
+              )
+
+            }
+
+            previewUrl = null
+
+            results.hidden = true
+
+            showError('')
+
+
+            const file =
+              imageInput.files[0]
+
+
+            analyzeButton.disabled =
+              !file
+
+
+            if (!file) {
+
+              preview.hidden = true
+
+              preview.removeAttribute(
+                'src'
+              )
+
+              placeholder.hidden =
+                false
+
+              return
+
+            }
+
+
+            previewUrl =
+              URL.createObjectURL(
+                file
+              )
+
+
+            preview.src =
+              previewUrl
+
+
+            preview.hidden =
+              false
+
+
+            placeholder.hidden =
+              true
+
+          }
+        )
+
+
+        /* ==================================================
+           FORM SUBMISSION
+        =================================================== */
+
+        form.addEventListener(
+          'submit',
+          async (event) => {
+
+            event.preventDefault()
+
+
+            if (!imageInput.files[0]) {
+
+              return
+
+            }
+
+
+            showError('')
+
+            results.hidden = true
+
+            analyzeButton.disabled =
+              true
+
+            analyzeButton.textContent =
+              'Analyzing...'
+
+
+            const formData =
+              new FormData()
+
+
+            formData.append(
+              'image',
+              imageInput.files[0]
+            )
+
+
+            try {
+
+              /* ============================================
+                 SEND IMAGE TO FLASK
+              ============================================= */
+
+              const response =
+                await fetch(
+                  '/api/detection/analyze',
+                  {
+                    method: 'POST',
+                    body: formData,
+                  }
+                )
+
+
+              const data =
+                await response.json()
+
+
+              /* ============================================
+                 ERROR RESPONSE
+              ============================================= */
+
+              if (!response.ok) {
+
+                throw new Error(
+                  data.error ||
+                  'Image analysis failed.'
+                )
+
+              }
+
+
+              /* ============================================
+                 CHECK RESPONSE
+              ============================================= */
+
+              if (
+                typeof data !== 'object' ||
+                data === null
+              ) {
+
+                throw new Error(
+                  'Invalid response from detection server.'
+                )
+
+              }
+
+
+              /* ============================================
+                 PREDICTION
+                 
+                 IMPORTANT:
+                 Use data.label, NOT data.prediction.
+
+                 Backend:
+                 0 = Cover Image
+                 1 = Stego Image
+              ============================================= */
+
+              prediction.textContent =
+                data.label || 'Unknown'
+
+
+              /* ============================================
+                 CONFIDENCE
+                 
+                 Backend already returns percentage.
+
+                 Example:
+                 data.confidence = 96
+
+                 Therefore:
+                 DO NOT multiply by 100.
+              ============================================= */
+
+              const confidence =
+                Number(
+                  data.confidence
+                )
+
+
+              if (
+                Number.isFinite(
+                  confidence
+                )
+              ) {
+
+                confidenceValue.textContent =
+                  `${confidence.toFixed(2)}%`
+
+
+                confidenceMeter.value =
+                  Math.max(
+                    0,
+                    Math.min(
+                      100,
+                      confidence
+                    )
+                  )
+
+              } else {
+
+                confidenceValue.textContent =
+                  'N/A'
+
+                confidenceMeter.value =
+                  0
+
+              }
+
+
+              /* ============================================
+                 CLASS PROBABILITIES
+              ============================================= */
+
+              if (
+                data.probabilities
+              ) {
+
+                const cover =
+                  Number(
+                    data.probabilities.cover
+                  )
+
+
+                const stego =
+                  Number(
+                    data.probabilities.stego
+                  )
+
+
+                if (
+                  Number.isFinite(
+                    cover
+                  )
+                ) {
+
+                  coverProbability.textContent =
+                    `${cover.toFixed(2)}%`
+
+                } else {
+
+                  coverProbability.textContent =
+                    'N/A'
+
+                }
+
+
+                if (
+                  Number.isFinite(
+                    stego
+                  )
+                ) {
+
+                  stegoProbability.textContent =
+                    `${stego.toFixed(2)}%`
+
+                } else {
+
+                  stegoProbability.textContent =
+                    'N/A'
+
+                }
+
+              }
+
+
+              /* ============================================
+                 EXTRACTED FEATURES
+                 
+                 Expected backend response:
+
+                 feature_order:
+                 [
+                   "lsb_mean",
+                   "lsb_variance",
+                   "lsb_transition_rate",
+                   "pixel_mean",
+                   "pixel_variance"
+                 ]
+
+                 features:
+                 {
+                   lsb_mean: ...,
+                   ...
+                 }
+              ============================================= */
+
+              if (
+                Array.isArray(
+                  data.feature_order
+                ) &&
+                data.features
+              ) {
+
+                for (
+                  const name
+                  of data.feature_order
+                ) {
+
+                  const featureValue =
+                    document.querySelector(
+                      `[data-feature-value="${name}"]`
+                    )
+
+
+                  if (
+                    !featureValue
+                  ) {
+
+                    continue
+
+                  }
+
+
+                  const numericValue =
+                    Number(
+                      data.features[name]
+                    )
+
+
+                  if (
+                    Number.isFinite(
+                      numericValue
+                    )
+                  ) {
+
+                    featureValue.textContent =
+                      numericValue.toLocaleString(
+                        undefined,
+                        {
+                          maximumFractionDigits: 8,
+                        }
+                      )
+
+                  } else {
+
+                    featureValue.textContent =
+                      'N/A'
+
+                  }
+
+                }
+
+              }
+
+
+              /* ============================================
+                 SHOW RESULTS
+              ============================================= */
+
+              results.hidden =
+                false
+
+            }
+
+
+            catch (error) {
+
+              console.error(
+                'Detection error:',
+                error
+              )
+
+
+              showError(
+                error.message ||
+                'Image analysis failed.'
+              )
+
+            }
+
+
+            finally {
+
+              analyzeButton.disabled =
+                !imageInput.files[0]
+
+
+              analyzeButton.textContent =
+                'Analyze Image'
+
+            }
+
+          }
+        )
+
+      })()
+
+    </script>
+
+  </body>
+</html>

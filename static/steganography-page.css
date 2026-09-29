@@ -1,0 +1,80 @@
+.stego-workspace {
+  width: min(700px, 100%);
+}
+
+.stego-panel {
+  margin-top: 0;
+}
+
+.stego-panel[hidden] {
+  display: none;
+}
+
+.stego-image-frame {
+  min-height: 190px;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  border: 1px dashed #bdc9bf;
+  background: #f6f8f5;
+  color: #6e7c72;
+  text-align: center;
+  overflow: hidden;
+}
+
+.stego-image-frame img {
+  display: block;
+  max-width: 100%;
+  max-height: 300px;
+  object-fit: contain;
+}
+
+.stego-image-frame img[hidden] {
+  display: none;
+}
+
+.stego-image-frame figcaption {
+  padding: 18px;
+  font-size: 13px;
+}
+
+.stego-output-frame {
+  min-height: 220px;
+  border-style: solid;
+  background: #fcfdfb;
+}
+
+.stego-panel input[type='file'] {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #d5ded6;
+  padding: 9px;
+  background: #fcfdfb;
+  color: var(--ink);
+  font: 400 13px/1.5 'Aptos', 'Segoe UI', sans-serif;
+}
+
+.stego-panel input[type='file']::file-selector-button {
+  margin-right: 12px;
+  border: 1px solid #c5d2c8;
+  padding: 7px 11px;
+  background: #edf3ee;
+  color: #245b48;
+  font: inherit;
+  cursor: pointer;
+}
+
+.stego-panel .crypto-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.56;
+}
+
+@media (max-width: 600px) {
+  .stego-image-frame {
+    min-height: 150px;
+  }
+
+  .stego-output-frame {
+    min-height: 180px;
+  }
+}

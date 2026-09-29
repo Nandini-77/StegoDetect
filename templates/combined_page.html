@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f2f5f0" />
+    <title>Cryptography + Steganography</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='crypto-page.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='steganography-page.css') }}" />
+    <style>
+      :root {
+        --page: #f2f5f0;
+        --surface: #fff;
+        --ink: #202a25;
+        --line: #dce3dc;
+        --grid-dot: #d5ddd5;
+        --heading: 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', Georgia, serif;
+        --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+
+        font-family: 'Aptos', 'Segoe UI', sans-serif;
+        color: var(--ink);
+        background: var(--page);
+        font-synthesis: none;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      body {
+        min-width: 320px;
+        min-height: 100vh;
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="crypto-page stego-page">
+      <nav class="crypto-topbar" aria-label="Breadcrumb">
+        <a class="back-link" href="/">Back to categories</a>
+        <span class="topbar-label">CRYPTOGRAPHY + STEGANOGRAPHY / 03</span>
+      </nav>
+
+      <section class="crypto-content" aria-labelledby="combined-title">
+        <div class="crypto-workspace stego-workspace">
+          <header class="crypto-heading">
+            <span class="crypto-eyebrow">ENCRYPTED, THEN HIDDEN</span>
+            <h1 id="combined-title">Cryptography + Steganography</h1>
+          </header>
+
+          <div class="mode-switch" role="group" aria-label="Choose an operation" data-mode="encrypt">
+            <span class="mode-indicator" aria-hidden="true"></span>
+            <button id="combined-encrypt-tab" type="button" aria-pressed="true">Encrypt</button>
+            <button id="combined-decrypt-tab" type="button" aria-pressed="false">Decrypt</button>
+          </div>
+
+          <section id="combined-encrypt-panel" class="crypto-form stego-panel" aria-label="Encrypt a message in an image">
+            <div class="crypto-fields">
+              <label class="field-group" for="combined-message">
+                <span>Message</span>
+                <textarea id="combined-message" rows="4" placeholder="Enter a message"></textarea>
+              </label>
+
+              <label class="field-group" for="combined-encrypt-key">
+                <span>Password</span>
+                <input id="combined-encrypt-key" type="password" autocomplete="off" placeholder="Enter a password" />
+              </label>
+
+              <label class="field-group" for="combined-carrier-image">
+                <span>Carrier image</span>
+                <input id="combined-carrier-image" type="file" accept="image/*" />
+              </label>
+
+              <figure class="stego-image-frame">
+                <img id="combined-carrier-preview" alt="Selected carrier image" hidden />
+                <figcaption id="combined-carrier-placeholder">Selected image preview</figcaption>
+              </figure>
+
+              <button id="combined-encrypt-button" class="crypto-submit" type="button" disabled>
+                Encrypt message
+              </button>
+
+              <div class="field-group">
+                <span>Encrypted output image</span>
+                <figure class="stego-image-frame stego-output-frame">
+                  <img id="combined-output-image" alt="Encrypted stego image" hidden />
+                  <figcaption id="combined-output-placeholder">Output image will appear here</figcaption>
+                </figure>
+                <a id="combined-download-link" class="stego-download" hidden download="combined_stego.png">Download PNG</a>
+              </div>
+            </div>
+          </section>
+
+          <section id="combined-decrypt-panel" class="crypto-form stego-panel" aria-label="Decrypt a message from an image" hidden>
+            <div class="crypto-fields">
+              <label class="field-group" for="combined-stego-image">
+                <span>Image</span>
+                <input id="combined-stego-image" type="file" accept="image/*" />
+              </label>
+
+              <figure class="stego-image-frame">
+                <img id="combined-stego-preview" alt="Selected encrypted image" hidden />
+                <figcaption id="combined-stego-placeholder">Selected image preview</figcaption>
+              </figure>
+
+              <button id="combined-extract-button" class="crypto-submit" type="button" disabled>
+                Extract ciphertext
+              </button>
+
+              <div class="field-group">
+                <label for="combined-ciphertext">Ciphertext</label>
+                <textarea id="combined-ciphertext" rows="4" placeholder="Extracted ciphertext will appear here" readonly></textarea>
+                <button id="combined-decrypt-open-button" class="crypto-submit" type="button" disabled>
+                  Decrypt
+                </button>
+              </div>
+
+              <div id="combined-password-panel" hidden>
+                <label class="field-group" for="combined-decrypt-key">
+                  <span>Password / key</span>
+                  <input id="combined-decrypt-key" type="password" autocomplete="off" placeholder="Enter the password or key" />
+                </label>
+                <button id="combined-decrypt-button" class="crypto-submit" type="button" disabled>
+                  Decrypt message
+                </button>
+              </div>
+
+              <div id="combined-plaintext-panel" hidden>
+                <label class="field-group" for="combined-output-message">
+                  <span>Plaintext</span>
+                  <textarea id="combined-output-message" rows="4" placeholder="Decrypted plaintext will appear here" readonly></textarea>
+                </label>
+              </div>
+            </div>
+          </section>
+          <p id="combined-error" class="crypto-error" role="alert" hidden></p>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      (() => {
+        const encryptTab = document.getElementById('combined-encrypt-tab')
+        const decryptTab = document.getElementById('combined-decrypt-tab')
+        const modeSwitch = document.querySelector('.mode-switch')
+        const encryptPanel = document.getElementById('combined-encrypt-panel')
+        const decryptPanel = document.getElementById('combined-decrypt-panel')
+        const messageField = document.getElementById('combined-message')
+        const encryptKey = document.getElementById('combined-encrypt-key')
+        const decryptKey = document.getElementById('combined-decrypt-key')
+        const carrierInput = document.getElementById('combined-carrier-image')
+        const stegoInput = document.getElementById('combined-stego-image')
+        const encryptButton = document.getElementById('combined-encrypt-button')
+        const extractButton = document.getElementById('combined-extract-button')
+        const openDecryptButton = document.getElementById('combined-decrypt-open-button')
+        const decryptButton = document.getElementById('combined-decrypt-button')
+        const ciphertextField = document.getElementById('combined-ciphertext')
+        const passwordPanel = document.getElementById('combined-password-panel')
+        const plaintextPanel = document.getElementById('combined-plaintext-panel')
+        const outputImage = document.getElementById('combined-output-image')
+        const outputPlaceholder = document.getElementById('combined-output-placeholder')
+        const outputMessage = document.getElementById('combined-output-message')
+        const downloadLink = document.getElementById('combined-download-link')
+        const errorMessage = document.getElementById('combined-error')
+        const previews = [
+          [carrierInput, document.getElementById('combined-carrier-preview'), document.getElementById('combined-carrier-placeholder')],
+          [stegoInput, document.getElementById('combined-stego-preview'), document.getElementById('combined-stego-placeholder')],
+        ]
+        const previewUrls = new Map()
+        let outputUrl = null
+
+        function showError(message) {
+          errorMessage.textContent = message
+          errorMessage.hidden = !message
+        }
+
+        function updateButtons() {
+          encryptButton.disabled = !messageField.value.trim() || !encryptKey.value || !carrierInput.files[0]
+          extractButton.disabled = !stegoInput.files[0]
+          openDecryptButton.disabled = !ciphertextField.value
+          decryptButton.disabled = !decryptKey.value || !ciphertextField.value
+        }
+
+        function clearOutputImage() {
+          if (outputUrl) URL.revokeObjectURL(outputUrl)
+          outputUrl = null
+          outputImage.hidden = true
+          outputImage.removeAttribute('src')
+          outputPlaceholder.hidden = false
+          downloadLink.hidden = true
+          downloadLink.removeAttribute('href')
+        }
+
+        function resetFields() {
+          messageField.value = ''
+          encryptKey.value = ''
+          decryptKey.value = ''
+          ciphertextField.value = ''
+          outputMessage.value = ''
+          passwordPanel.hidden = true
+          plaintextPanel.hidden = true
+          clearOutputImage()
+          showError('')
+          for (const [input, preview, placeholder] of previews) {
+            input.value = ''
+            preview.hidden = true
+            preview.removeAttribute('src')
+            placeholder.hidden = false
+            const url = previewUrls.get(input.id)
+            if (url) URL.revokeObjectURL(url)
+            previewUrls.delete(input.id)
+          }
+          updateButtons()
+        }
+
+        function changeMode(mode) {
+          const isEncrypt = mode === 'encrypt'
+          modeSwitch.dataset.mode = mode
+          encryptTab.setAttribute('aria-pressed', String(isEncrypt))
+          decryptTab.setAttribute('aria-pressed', String(!isEncrypt))
+          encryptPanel.hidden = !isEncrypt
+          decryptPanel.hidden = isEncrypt
+          resetFields()
+        }
+
+        for (const [input, preview, placeholder] of previews) {
+          input.addEventListener('change', () => {
+            const previousUrl = previewUrls.get(input.id)
+            if (previousUrl) URL.revokeObjectURL(previousUrl)
+            const file = input.files[0]
+            if (input === stegoInput) {
+              ciphertextField.value = ''
+              decryptKey.value = ''
+              outputMessage.value = ''
+              passwordPanel.hidden = true
+              plaintextPanel.hidden = true
+              showError('')
+            }
+            if (!file) {
+              preview.hidden = true
+              preview.removeAttribute('src')
+              placeholder.hidden = false
+              updateButtons()
+              return
+            }
+            const url = URL.createObjectURL(file)
+            previewUrls.set(input.id, url)
+            preview.src = url
+            preview.hidden = false
+            placeholder.hidden = true
+            updateButtons()
+          })
+        }
+
+        async function submitEncrypt() {
+          showError('')
+          clearOutputImage()
+          encryptButton.disabled = true
+          encryptButton.textContent = 'Encrypting...'
+          const formData = new FormData()
+          formData.append('message', messageField.value)
+          formData.append('key', encryptKey.value)
+          formData.append('image', carrierInput.files[0])
+          try {
+            const response = await fetch('/api/combined/encrypt', { method: 'POST', body: formData })
+            if (!response.ok) {
+              const data = await response.json()
+              throw new Error(data.error || 'Could not encrypt the message.')
+            }
+            outputUrl = URL.createObjectURL(await response.blob())
+            outputImage.src = outputUrl
+            outputImage.hidden = false
+            outputPlaceholder.hidden = true
+            downloadLink.href = outputUrl
+            downloadLink.hidden = false
+          } catch (error) {
+            showError(error.message || 'Could not encrypt the message.')
+          } finally {
+            encryptButton.textContent = 'Encrypt message'
+            updateButtons()
+          }
+        }
+
+        async function extractCiphertext() {
+          showError('')
+          ciphertextField.value = ''
+          decryptKey.value = ''
+          passwordPanel.hidden = true
+          plaintextPanel.hidden = true
+          outputMessage.value = ''
+          extractButton.disabled = true
+          extractButton.textContent = 'Extracting...'
+          const formData = new FormData()
+          formData.append('image', stegoInput.files[0])
+          try {
+            const response = await fetch('/api/combined/extract', { method: 'POST', body: formData })
+            const data = await response.json()
+            if (!response.ok) throw new Error(data.error || 'Could not extract ciphertext.')
+            ciphertextField.value = data.result
+          } catch (error) {
+            showError(error.message || 'Could not extract ciphertext.')
+          } finally {
+            extractButton.textContent = 'Extract ciphertext'
+            updateButtons()
+          }
+        }
+
+        async function submitDecrypt() {
+          showError('')
+          outputMessage.value = ''
+          decryptButton.disabled = true
+          decryptButton.textContent = 'Decrypting...'
+          try {
+            const response = await fetch('/api/crypto/decrypt', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text: ciphertextField.value, key: decryptKey.value }),
+            })
+            const data = await response.json()
+            if (!response.ok) throw new Error(data.error || 'Could not decrypt the message.')
+            outputMessage.value = data.result
+            plaintextPanel.hidden = false
+          } catch (error) {
+            showError(error.message || 'Could not decrypt the message.')
+          } finally {
+            decryptButton.textContent = 'Decrypt message'
+            updateButtons()
+          }
+        }
+
+        function openDecryptOptions() {
+          passwordPanel.hidden = false
+          decryptKey.focus()
+        }
+
+        messageField.addEventListener('input', updateButtons)
+        encryptKey.addEventListener('input', updateButtons)
+        decryptKey.addEventListener('input', updateButtons)
+        encryptButton.addEventListener('click', submitEncrypt)
+        extractButton.addEventListener('click', extractCiphertext)
+        openDecryptButton.addEventListener('click', openDecryptOptions)
+        decryptButton.addEventListener('click', submitDecrypt)
+        encryptTab.addEventListener('click', () => changeMode('encrypt'))
+        decryptTab.addEventListener('click', () => changeMode('decrypt'))
+      })()
+    </script>
+  </body>
+</html>

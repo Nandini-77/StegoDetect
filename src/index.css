@@ -1,0 +1,27 @@
+:root {
+  --page: #f2f5f0;
+  --surface: #fff;
+  --ink: #202a25;
+  --line: #dce3dc;
+  --grid-dot: #d5ddd5;
+  --heading: 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', Georgia, serif;
+  --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+
+  font-family: 'Aptos', 'Segoe UI', sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
